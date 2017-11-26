@@ -1,0 +1,294 @@
+\documentclass{article}
+\usepackage[margin=1in,footskip=0.25in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{hyperref}
+\usepackage{url}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\pagestyle{fancy}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\title{CS345 Theoretical Assignment 1}
+\author{Abhibhav Garg \\ 150010 \and Abhisek Panda \\ 150026}
+
+\begin{document}
+\maketitle
+
+\section{Question 1}
+To design an $O(n)$ space data structure to answer queries inquiring all the points(not the number of points) above a query line in 2D space in $O(klogn)$ time. Given, the space of points is constant.
+
+\subsection{Algorithm}
+\begin{itemize}
+	\item Divide the space of points into layers of convex hulls. This is achieved by first computing the convex hull for entire set, then remove all the points lying on this hull, then recurse for the remaining points till the point space is exhausted.
+	
+	\item This reduces the given problem to finding the points above a query line in a single convex hull, and repeating the procedure for each hull.
+	
+	\item Consider a single convex hull. We store the convex hull as an array of points on the hull, starting with the leftmost(minimum x coordinate) point on the hull. The points are stored in clockwise manner of their appearance. Also, maintain a pointer to the element corresponding to the rightmost point on the hull(maximum x coordinate). The elements between leftmost and  rightmost parts represent the Upper Convex Hull and the other part represents the Lower Convex Hull.
+	
+	\item Note that if we are able to find any 1 point above the query line, we can easily find all other points above the  line in $O(k_1)$ time where $k_1$ is the number of points above the line, by linearly traversing along the array in both directions.
+	
+	\item Any one point above the line(if exists) can be found by using a Binary Search on the array representing upper half of the hull(lets call it $U$). The binary search is performed based on slope of query line and slopes of the lines joining mid point to its neighbours.
+	
+	\item If the midpoint is above the line, we are done. Else, we join the point to its right and left neighbours. Let slopes of these lines be $m_R$ and $m_L$ respectively. If m is less than $m_R$, we recurse in right half. If m is greater than $m_L$, we recurse in left half. Else we return -1. This works since the polygon is convex.
+	
+	\item Since a point above the line, if exists, is sure to be present in the Upper half, we consider only the upper half for binary search.
+	
+	\item Once a point is found above the line, traverse left as well as right of that point along the convex hull, till a below point is reached on both sides.
+	
+	\item We start considering the hulls from the outer side. Note that once binary search for any hull returns -1(i.e., no point above the line is found), we can simply stop there, since it is guaranteed that no inner convex hull will have any point above the line.
+	
+\end{itemize}
+\newpage
+\par
+\textbf{Pseudo code for Binary Search}:
+\begin{algorithm}
+	\caption{Binary Search to find one point above a given line}.
+	\label{alg:bs}
+	\begin{algorithmic}
+		
+		\Function{search}{$U, left, right, m, b$}\Comment{m represents the slope of line, b is the intercept}
+		\If {left $\ge$ right}
+		\Return -1
+		\EndIf
+		\State $mid = (left + right) / 2$
+		\If {$isAbove(u, mid, m, b)$}
+		\Return mid
+		\ElsIf {$m \le slope(U, mid, mid + 1)$}
+		\Return search(U, mid, right, m, b)
+		\ElsIf {$m \ge slope(U, mid, mid - 1)$}
+		\Return search(U, left, mid, m, b)
+		\Else \;
+		\Return -1
+		\EndIf
+		\EndFunction
+	\end{algorithmic}
+\end{algorithm}
+\par
+isAbove and slope are utility functions to check if a point is above line and finding slope of a line between 2 points respectively.
+\par
+
+\subsection{Space  Analysis:}
+We use 1 array to store all the points in a convex hull. This takes $O(n_i)$ space where $n_i$ is the number of points on the hull. This has to be repeated for all convex hull layers formed from the  points. Thus, total space required is $\sum O(n_i)$ which is equal to $O(n)$.
+
+\subsection{Query Time Analysis:}
+Given a query line, we have to find number of points above it for each convex hull. For a fixed hull, it takes $O(\log n_i)$ time to locate one point above the line through binary search. It further takes $O(k_i)$ time to report all the points above the line, where $k_i$ is the number of such points. So, total time for  query per convex hull is $O(\log n_i) + O(k_i)$.
+\par
+Thus, total time for the entire point space is $\sum [O(\log n_i) + O(k_i)]$ where i varies over all convex hulls. $\sum O(k_i)$ is equal to $\sum O(k)$ where k is the total number of points required. The worst case time complexity will occur when each convex hull contains exactly 1 point above the line. Since we stop after k iterations of the algorithm(as per last point of the algorithm), i varies from 1 to k only. Approximating $n_i$ as O(n), we obtain a loose bound for the time complexity as $ \sum_{i=1}^{i=k} O(\log n)$ which is equal to $O(k \log n)$.
+
+\subsection{Pre-Processing Time Analysis}
+Convex hull can be obtained in $O(n\log n)$ time. It takes extra $O(n_i)$ time to remove the points of ith layer and store it in the corresponding array where $n_i$ is the number of points on convex hull in layer i. Thus, total time complexity is  $O(n\log n) + O(n_1) + O((n-n_1)\log (n-n_1)) + O(n_2) + ...$ = $O(n^2\log n)$
+
+\subsection{Proof of Correctness}
+The main point here is that we start considering the hulls from outermost layer. Since it is convex, atleast one point(if any) is bound to exist in the upper half of the hull such that it lies above the line. This guarantees the binary search to return an above point if it exists at all. This leads us to find all the points on the outer hull that are above the line by linear traversal. Repeating this process for all hulls until one of them returns -1 gives the entire set of required points. The process can be stopped after any layer returns -1 since any inner layer is fully enclosed by the outer layer. Note that no point can be repeated in multiple hulls since we remove all points lying on a hull before processing the next inner hull.
+\newpage
+
+\section{Question 2}
+To design a $O(n)$ data structure to answer the following queries in $O(\log n)$ time.
+\begin{itemize}
+	\item Insert(D, i, x): Insert an element x at $i^{th}$ place in the sequence.
+	\item Delete(D, i): Delete $i^{th}$ element from the sequence.
+	\item Multi-add(D, i, j, $\delta$): Add $\delta$ to each element of the sequence starting from ith place to jth place.
+	\item Min(D, i, j): Report the smallest element in the sequence starting from ith place to jth place.
+\end{itemize}
+\subsection{Design}
+\begin{itemize}
+	\item Design a Balanced BST storing the following fields:
+		\begin{itemize}
+			\item size: size of subtree rooted at the node
+			\item val: value of node
+			\item pointers to left and right node
+			\item a parent pointer for fast access to parent nodes
+			\item color bit
+			\item inc: amount to be incremented for sub-tree rooted at the node
+			\item min: minimum value in the subtree rooted at u (ignoring all increments due to parent nodes)
+		\end{itemize}
+	\item Initialize the inc field to 0 in all nodes. The min field is recursively initialized as
+	$$ node.min = minimum(node.val, left(node).min, right(node).min) $$
+	where the base case is for leaf node, u.min = u.val;
+	Null nodes are suitably handled(by ignoring them)
+\end{itemize}
+\subsection{Designing the functions:}
+\subsubsection{Multi-add(D, i, j, $\delta$)}
+This function is very similar to the function discussed in the class for range addition in $O(\log n)$ time. The only difference is that whenever we update the \textbf{inc} field of any node or increment the value of a node itself, we also update the  min field of its parent node(if exists), since addition in a range may lead to change in minima of its super set. This has to be done recursively for all nodes while moving up in the tree from i(and j) to LCA(i,j). The extra work has to be done for $O(\log n)$ nodes only, thus the time complexity continues to be $O(\log n)$.
+The updation of parent is carried out as follows:
+$$parent(u).min = minimum(parent(u).val, \; sibling(u).min + sibling(u).inc, \; u.min + u.inc)$$
+Note that in case sibling(u) does not exist, $parent(u).min = minimum(parent(u).val, \; u.min + u.inc)$
+\par
+\subsubsection{Min(D, i, j)}
+Let u be the node storing $i^{th}$ element.
+Let v be the node storing $j^{th}$ element.
+First we find the LCA of u \& v. Let it be w. Then we start again from the root, and calculate a total\_inc variable to know the total increment, $\Sigma \; inc_i$ where $inc_i$ is the inc field of each node encountered till reaching target node while starting from root(including the inc field of target node itself). 
+\par
+The minimum value for any subtree rooted at $v$ will be $v.min + \Sigma \; inc_i$.
+\par
+Similarly, the value of any node $v$ will be $v.val + \Sigma \; inc_i$.
+\par
+ For u, we need to only consider the values of all nodes whose left child is in the path from LCA to u, and the min field of the root of the right subtree, of nodes whose left child is on this path. Similarly for v. Finding the minimum among these values will give us min(i,j)
+\par
+There are $O(\log n)$ nodes, so it takes $O(\log n)$ time to find the minimum among their values(total\_inc is calculated dynamically, so O(1) time is required for updating it).
+\par
+Similarly, there are $O(\log n)$ subtrees, and we have to check the min field of only their roots. This would again take $O(\log n)$ time.
+\par
+Thus, the total time complexity becomes $O(\log n)$ for range minima inquiry.
+
+\subsubsection{Insert(D, i, x)}
+%TODO: check if sizes field is required
+
+Insert operation of value x at index i is similar to the function discussed in class. We traverse to left or right depending on the values of root.size and i. If we move towards right, we modify i as $i - left(root).size - 1$ to account for the left subtree and root. Also, the size field of each node traversed is increased by 1 to accommodate the new node. The new node gets size 1.
+\par
+However, we also need to update the min for every node in the path(if necessary) and the value of the new node(final value after considering all increments should be x) so that the structure is not disturbed. 
+\par
+The value $x'$, which is stored in the new node, can be calculated easily by subtracting the inc value of each node in the path for reaching x as we traverse the tree. For updating minimum value, consider the following 2 cases:
+\begin{itemize}
+	\item We move towards right from root. In this case, the new value to be inserted is more than the value at root. Hence, there is no change in min field of root.
+	
+	\item We move towards left from root. In this case, there is a possibility that min value might get updated. The condition is mentioned below:
+
+\end{itemize} 
+	\begin{algorithm}
+		\begin{algorithmic}
+			\State $x \gets x - root.inc$
+			\If {root.min $\ge$ x}
+			\State root.min = x
+			\Else
+			\State \textbf{continue}
+			\EndIf
+		\end{algorithmic}
+	\end{algorithm}
+	Note that at the end of insertion procedure, the obtained BST may not be balanced. We thus need to perform rotations in order to restore the balance. However, note that the parameters like min, size and inc are local, i.e, they are only updated for the nodes joined by the edge around which rotation is performed and can be completely determined by their neighbors in the tree. Thus, the balancing operation will take $O(1)$ time, since each rotation can be performed in constant time.
+	
+\subsubsection{Delete(D, i)}
+Let u correspond to the $i^{th}$ index. Find the path from root to $i^{th}$ node by similar function to insert(using size field). Decrease the size field of each node along the path by 1. On reaching u, there are 2 cases:
+\begin{itemize}
+	\item u is a leaf node. In this case, simply free u and update the min fields of its ancestors recursively.
+	\item u is an inner node. In this case, find the in-order successor of u. During this routine, also decrease the size field of each node in the path to in-order successor by 1. Then, swap the val fields of u and its in-order successor. Finally, update the min field of each ancestor recursively.
+\end{itemize} 
+
+Finding $i^{th}$ index and swapping it with its inorder successor will take $O(\log n)$ time. The updation of min field in bottom up manner is also $O(\log n)$.
+\par
+After deletion, the tree may become unbalanced again. Similar explanation as the insertion procedure leads us to conclude that each rotation can be performed in $O(1)$ time along with updation of corresponding fields. However, since the deletion itself takes $O(\log n)$ time in worst case, balancing would require a further $O(\log n)$ time.
+\par
+The total time complexity therefore remains to be $O(\log n)$.
+\newpage
+The min field is for all ancestors is updated as follows:
+\begin{algorithm}
+	\caption{Iterative procedure for updating min after deletion}.
+	\label{alg:update_min}
+	\begin{algorithmic}
+		\State $u \gets parent(u)$
+		\Function {MinUpdate}{D, u}
+		\While {u IS NOT NULL}
+			\If {left(u) AND right(u)} \Comment{both children are present}
+				\State u.min = minimum(u.val, left(u).min + left(u).inc, right(u).min + right(u).inc)
+				\Else
+				\State u.min = minimum(u.val, child(u).min + child(u).inc) \Comment{Only 1 child is present}
+			\EndIf
+			$ u \gets parent(u) $
+		\EndWhile	
+		\EndFunction
+	\end{algorithmic}
+\end{algorithm}
+\newpage
+\section{Question 3:}
+\subsection{Algorithm Description}
+The greedy method used for the algorithm is as follows:
+At every step, we find the nodes that are closest in the graph, ie $argmin_{i, j} d(u_{i}, u_{j})$.
+These two nodes are assigned the same parent, and the value $h(x)$ for the parent is set as $d(u_{i}, u_{j})$.
+Now, these two nodes, are combined into a single supernode, say $U$.
+Further, all distances in the graph are set as $d(U, u_{k}) = min(d(u_{i}, u_{k}), d(u_{j}, u_{k}))$.
+This super node is added back to the graph as described above, and a smaller instance of the problem is thus obtained.
+This smaller instance is recursively solved for its solution.
+For the base case, where there are just two nodes in the graph, tree $T^{*}$ is constructed by taking a fixed root node (which will serve as the root of our rooted tree), assigning it two children, namely the two nodes, and settings its value $h$ to be the distance between the two children.
+Then in the solution of the smaller instance, the super node is replaced by a node, whose two children are $u_{i}, u_{j}$, and whose value, as described above, is $h(x) = d(u_{i}, u_{j})$.
+This completes the algorithm.
+Note that the algorithm is greedy since at every step we take the two closest nodes in the graph and give them a least common ancestor which is just one level higher in the rooted tree than the nodes themselves.
+
+\subsection{Proof of Correctness}
+The proof of correctness will follow the method described in class.
+The first part of the method, which involves the reduction of the problem to the smaller step and going from the smaller solution to the bigger solution has already been mentioned above.
+The proof begins with some lemma, followed by an argument to tie everything together.
+\begin{lemma}
+	There exists an optimal solution in which every non-leaf node in the tree has exactly two children.
+\end{lemma}
+\begin{proof}
+	By construction. Take any node $N$ in some optimal solution that has multiple children, say $A_{i}$ for $i = 1, 2, \dots$.
+	Create a new node $M$ are follows: Set its children to be $A_{2}, A_{3}, \dots$.
+	Set $M$ and $A_{1}$ to be the children of $N$.
+	Set the value of $M$ to be the same as $N$.
+	In this new tree, all pairs of nodes have the same tree distance and thus this solution is also optimal.
+	This can be applied recursively till all nodes have just two children.
+\end{proof}
+
+\begin{lemma}
+	There exist some optimal solution where the given two nodes $u_{i}, u_{j}$ are siblings.
+\end{lemma}
+\begin{proof}
+	Take any optimal solution.
+	Let $u_{i}$ and $u_{j}$ have siblings $u_{i}', u_{j}'$ respectively.
+	Let $u_{k}$ be the least common ancestor of $u_{i}, u_{j}$.
+	We can swap $u_{i}'$ and $u_{j}$ to make $u_{i}$ and $u_{j}$ siblings.
+	The only changes the LCA of nodes in the subtree rooted at $u_{k}$.
+	Note that the original value of $h(u_{k})$ is bounded by $d(u_{i}, u_{j})$, which is a minimum.
+	Thus, after the swap, all values of $h$ for the nodes in the subtree rooted at $u_{k}$ can remain constant without disturbing the balance condition, which means our new solution is also optimal, or the values can increase, leading to a contradiction to the original assumption.
+	This completes the proof of the lemma.
+\end{proof}
+
+We thus have a way of reducing the problem into a smaller subproblem, and a lemma that relates the problems.
+We now prove that optimal solutions give optimal solutions in both directions, completing the proof of correctness of the algorithm.
+\begin{lemma}
+	Optimal solution of $G$ gives optimal solution of $G'$ under the above transformation.
+\end{lemma}
+\begin{proof}
+	Let $h_{G}(LCA(u_{a}, u_{b})) = \alpha_{ab}$ for $a, b$ distinct from the $i, j$ that are the minimum.
+	Assume that there exists some tree $T'(G')$ for the smaller problem such that $h_{G'}(LCA(u_{a}, u_{b})) > \alpha_{ab}$ for some fixed $a, b$.
+	In this new tree, we can now then substitute the combined node back for $u_{i}, u_{j}$ without affecting $u_{a}, u_{b}$.
+	We thus have a tree that has higher value for $h$ at for nodes $u_{a}, u_{b}$, a contradiction.
+	Thus $T(G')$ is optimal.
+\end{proof}
+\begin{lemma}
+	Optimal solution of $G'$ gives optimal solution of $G$ under the above transformation.
+\end{lemma}
+\begin{proof}
+	The value for $h$ for the parent of $u_{i}, u_{j}$ is set as their distance, which is the minimum, and no tree can make this higher.
+	For pair of nodes that does not include $i, j$, if $T(G)$ had a greater $h$ value than $T(g')$ in an optimal solution, we can reconstruct a smaller tree from the optimal condition, and reach a contradiction in the same manner as that in the previous lemma.
+	For every pair of nodes that includes $i$ or $j$, since $LCA(u_{k}, u_{i}) = LCA(u_{j}, u_{k})$, no higher value of $h$ is possible for the LCA, since it is contrained by the minimum of the distances to $u_{i}$ and $u_{j}$, the same value that was set to the super node by construction. (Note that the fact that an optimal solution with $u_{i}, u_{j}$ exists is used in the proof for the last statement, which lets us only worry about trees where $u_{i}, u_{j}$ are infact neighbours.).
+	This completes the proof.
+\end{proof}
+
+The above four lemma - along with the trivial proof of the base case, complete the proof of the algorithm.
+
+\subsection{Efficient Implementation}
+An efficient implementation using heaps is used.
+A min-heap of all the edges is maintained with the distance as the key.
+An array is also maintained with the pointers to the nodes in the heap for constant time node access, and thus logarithmic time key update.
+\par
+Initially, $\log{n^{2}}$ time is taken to get the minimum distance edge.
+Further, it takes $O(n \log{n})$ time to find and update the keys of all edges in the array which have either $u_{i}$ or $u_{j}$ as one of their vertices, since there are $2n$ of them.
+In this update, we can either delete one of two copies of the edges, or set its value to infinity so it doesnt affect the rest of the heap.
+Finally, it takes constant time to take the solution of the smaller problem and build the solution for the problem at hand.
+The time taken once the heap is built is given by the recursion $T(n) = T(n-1) + O(n \log{n})$ which has solution $T(n) = O(n^{2} \log{n})$.
+Thus the total time includes the $n^{2}$ time for heapify and $n^{2} \log{n}$ time for solving, giving a final asymptotic time complexity of $O(n^{2} \log{n})$
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

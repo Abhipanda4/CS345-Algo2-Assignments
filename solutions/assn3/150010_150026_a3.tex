@@ -1,0 +1,191 @@
+\documentclass{article}
+\usepackage[margin=1in,footskip=0.25in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{hyperref}
+\usepackage{url}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\pagestyle{fancy}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\let\oldReturn\Return
+\renewcommand{\Return}{\State\oldReturn}
+
+\title{CS345 Theoretical Assignment 3}
+\author{Abhibhav Garg \\ 150010 \and Abhisek Panda \\ 150026}
+
+\begin{document}
+\maketitle
+
+\section{Question 1}
+Given a DAG $G=(V,E)$ , task is to assign integral weights to the edges so that every path from $s(source)$ to $t(exit\;vertex)$ has a unique pathID. pathID is defined as the sum of weights of all edges in the path.
+
+\subsection{Algorithm:}
+We follow a bottom-up procedure to find the required edge weights. The steps are discussed below:
+\begin{itemize}
+	\item The given graph is first topologically sorted(since its a DAG, a topological sorting exists).s appears as the first vertex and t as the last in the sorted graph. All other vertices are ignored.
+	\item Consider each vertex(say u) in order  of their appearance in topological sort, starting from s. Let $X_i$ denote the vertices such that $(X_i, u) \in E$. Let the number of paths from s to $X_i$ be denoted by $n_i$. Since a bottom up approach is followed, all $n_i$'s are already known.
+	\item The edges $(X_i, u)$ is assigned weights as follows:
+	\begin{algorithm}
+		\caption{Assigning weights to edges ending at u:}
+		\label{alg:wts_assign}
+		\begin{algorithmic}
+			\Function{AssignWeights}{$G, u$}
+				\State $U \leftarrow \{x \; | \; (x,u) \in E\}$
+				\State $incr \leftarrow 0$
+				\For{$x_i$ in U}
+					\State $n_i \leftarrow$ Number of paths from s to $x_i$
+					\State $w(x_i, u) = incr$
+					\State $incr += n_i$
+				\EndFor
+			\EndFunction
+		\end{algorithmic}
+	\end{algorithm}
+	\item So the entire algorithm becomes:
+	\begin{algorithm}
+		\caption{Assigning weights to all edges in G}
+		\label{alg:wts_assign_all}
+		\begin{algorithmic}
+			\Function{FinalWeights}{$G, u$}
+			\State $G^{'} \leftarrow$ TopologicalSort(G)
+			\For{u in order of appearance in $G^{'}$}
+			\State AssignWeights(G, u)
+			\EndFor
+			\EndFunction
+		\end{algorithmic}
+	\end{algorithm}
+\end{itemize}
+
+\subsection{Proof of Correctness:}
+At any iteration step through the topologically sorted graph, let the vertex being considered be $u$. Let $U = \{x \; | \; (x,u) \in E\}$. We will prove the correctness by induction on weights of edges considered till u.\\\\
+\textbf{Induction Hypothesis:} Applying the above algorithm for any vertex u yields the correct weights so that every path has a unique ID in the range of 0 to $n-1$, where n is total number of paths from s to u.\\\\
+\textbf{Base Case:} When $u = s$, U is either {s} or an empty set. So if s has a self loop type edge, it is assigned a weight 0, otherwise the function returns. Hence, the induction  holds for base case.\\\\
+\textbf{General case:}\\
+Let $n_i$ correspond to number of paths from s to $x_i$. By  induction  hypothesis, all edges considered till now are assigned weights such that each path from $s$ to $x_i$ has a unique pathId between 0 to $n_i - 1$.
+\begin{itemize}
+	\item Consider edge ($x_1, u$). Assign it a weight 0.
+	\item Consider edge ($x_2, u$). The paths from s to $x_2$ have unique IDs between 0 to $n_2 -1$ by induction hypothesis. Since we already have paths from s to u with Ids from 0 to $n_1 - 1$, assign this edge a weight $n_1$ so that we get paths with Ids between $n_1$ and $n_1 + n_2 - 1$
+	\item Assign a weight of $n_1 + n_2$ to ($x_3, u$) to get pathIDs in the range $n_1 + n_2$ to $n_1 + n_2 + n_3 - 1$.
+	\item Similarly, for any vertex $x_i(i > 1)$, assign the corresponding edge a weight of $\sum_{j=1}^{j=i-1} n_i$
+\end{itemize}
+Thus at the end of the iteration, we get weights so that pathIds from s to u are unique and lie between 0 to n - 1. Thus by induction, correctness follows. 
+
+\subsection{Time Complexity Analysis:}
+Topological Sorting of the graph takes $\mathbf{O}(m+n)$ time.\\
+Number of paths can from s to u can be written as $p(u) = \sum_{x:(x,u) \in E} p(x)$. By following the bottom up approach, this can be calculated in $\mathbf{O}(deg(u))$ time for each vertex. So this takes $\mathbf{O}(m+n)$ time.\\
+The edge weights can be assigned in the same traversal as for calculating number of paths which again takes $\mathbf{O}(deg(u))$ time for each vertex. Thus, this will also take $\mathbf{O}(m+n)$  time which leads to an overall complexity of $\mathbf{O}(m+n)$.
+
+\newpage
+\section{Question 2:}
+To find if the graph is a unique path graph given a graph G with a vertex s such that each vertex is reachable from s in $O(m+n)$ time.
+
+\subsection{Algorithm:}
+
+\begin{algorithm}[!ht]
+	\caption{\uppercase{Unique Path Graph}}
+	
+	\begin{algorithmic}[1]
+		\State UniquePathGraph $\gets$ false
+		\State Visited[] $\gets$ false
+		\State Finished[] $\gets$ false
+		\State %parent[] $\gets$ -1;
+		D[] $\gets$ 0;
+		%low[] $\gets$ 0;
+		%F[] $\gets$ 0;
+		% \State{Back-edges[] $\gets$ 0}
+		\State crossingEdges[] $\gets$ 0
+		\Procedure{Augmented-DFS}{u}
+		\State Visited[$u$] $\gets$ true
+		\State count++
+		\State $D[u] \gets count$
+		%\State $low[u] \gets count$
+		\State topMostPoint $\gets$ D[$u$]
+		\For{each edge $(u,v)$}
+			\If{Visited[$v$] = false}
+				% \State parent[$v$] $\gets$ $u$
+				\State{highPoint = Augmented-DFS($v$)}\Comment{Parent gets the high point of its subtrees}
+				\State topMostPoint = min(topMostPoint, highPoint)
+				\If {highPoint $<$ $D[u]$} \Comment{Back edge is crossing the parent node}
+					\State crossingEdges[u] ++
+					\If {crossingEdges[u] $>$ 1}
+						\State{UniquePathGraph $\gets$ false}
+						\Return
+					\EndIf
+				\EndIf
+				
+		%\State low[u] = min(low[u], low[v])
+		%\If {$low[v] < D[u]$}
+		%	\State crossingEdges[u] ++
+		%	\If{crossingEdges[$u$] $>$ 1}
+		%	\State{UniquePathGraph $\gets$ false;}
+		%	\Return
+		%	\EndIf
+		%	\EndIf
+			\Else 
+				\If{Finished[$v$]} \Comment{Forward or Cross Edge}
+					\State{UniquePathGraph $\gets$ false}
+					\Return
+				\Else
+		%\State{BackEdges[$u$]++;}
+		%\State crossingEdges[u] ++
+		%\If{BackEdges[$u$] $>$ 1}\Comment{More than 1 backedge from 1 vertex}
+		%\State{UniquePathGraph $\gets$ false;}
+		%\Return
+		%\EndIf
+		%\State low[u] = min(low[u], D[v])
+					\State crossingEdges[u]++ \Comment{Since u has a backedge}
+					\State \Comment{increase the count for subtree rooted at u}
+					\If {crossingEdges[u] $>$ 1}
+						\State{UniquePathGraph $\gets$ false}
+						\Return
+					\EndIf
+					\State topMostPoint = min(topMostPoint, D[v])
+				\EndIf
+			\EndIf
+		\EndFor
+		\State{Finished[$u$] $\gets$ true;}
+	%	\State{F[$u$] $\gets$ count++;}
+		\Return topMostPoint
+		\EndProcedure
+	\end{algorithmic}
+\end{algorithm}
+\newpage
+\subsection{Proof of Correctness:}
+As discussed in class, in a DFS tree presence of any cross edge or front edge guarantees that the graph is not unique path. Similarly, 2 back edges from the same vertex also guarantee that graph is not unique path.
+%TODO: Insert 3 images here
+
+The proof that front edges, cross edges do NOT permit the graph to be unique path is as discussed in class. Here, we give the proof for the other constraint.
+
+\begin{lemma}
+	Consider any subtree of the DFS tree made by staring from the source vertex. If there are 2 or more backedges leaving this subtree, then the path is not unique path graph.
+\end{lemma}
+\begin{proof}
+	Let there be 2 such backedges (x,y) and (u,v). Root of the subtree is w. Then there are 2 paths possible from w to y(Assuming v is above y), one is $P(w,x) + (x,y)$ and the other is $P(w,u) + (u,v) + P(v,y)$
+\end{proof}
+
+Therefore, we check for every vertex u, the number of backedges from subtrees of u with end vertex (strictly)higher than u(i.e. $D[endpt] < D[u]$). DFS at any node returns the highest point(among backedges) of its subtree to its parent. The parent then increments its number of crossing edges(number of back edges with end points higher than itself) if the end point is higher than it. The graph ceases to have unique path property if at any node, number of back edges going higher than it from its subtree is greater than 1. The parent compares the return values of all its descendants, if no edge crosses it, it returns its own DFS number.
+
+\subsection{Time Complexity:}
+Since only one DFS is performed, time complexity is $\mathbf{O}(m+n)$.
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
